@@ -1,74 +1,159 @@
 import org.apache.commons.csv.CSVFormat;
 import org.apache.commons.csv.CSVParser;
 import org.apache.commons.csv.CSVRecord;
-import org.apache.poi.ss.usermodel.Sheet;
-import org.apache.poi.ss.usermodel.Workbook;
+import org.apache.poi.ss.usermodel.FormulaEvaluator;
+import org.apache.poi.xssf.usermodel.XSSFRow;
+import org.apache.poi.xssf.usermodel.XSSFSheet;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 
-import java.io.BufferedReader;
-import java.io.FileReader;
-import java.io.IOException;
+import java.io.*;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.time.LocalDate;
 import java.time.Month;
-import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
+import java.util.Scanner;
+import java.util.stream.Stream;
 
 public class Runner {
 
     enum Category {
-        INCOME,PAY,FOOD,GAS,RENT,CONVIENT_STORE,CLOTHES,OTHER
-    }
+        INCOME(1),
+        PAY(2),
+        FOOD(3),
+        GAS(4),
+        RENT(5),
+        CONVIENT_STORE(7),
+        CLOTHES(8),
+        OTHER(9);
 
-    public static Map<Category, Integer> catToCellMap = new HashMap() {{
-        put(Category.INCOME, 1);
-        put(Category.PAY, 2);
-        put(Category.FOOD, 3);
-        put(Category.GAS, 4);
-        put(Category.RENT, 5);
-        put(Category.CONVIENT_STORE, 7);
-        put(Category.CLOTHES, 8);
-        put(Category.OTHER, 9);
-    }};
+        Category(int col) {
+            this.col = col;
+        }
+        int col;
 
-    private static int getMonthRow(Month month) {
-        return 01;
+        public static Category getCategoryFromCol(int column) {
+            return Stream.of(values())
+                    .filter(x -> x.col == column)
+                    .findFirst()
+                    .get();
+        }
+
+        public static int getColFromCategory(Category category) {
+            return Stream.of(values())
+                    .filter(x -> x != category)
+                    .map(x -> x.col)
+                    .findFirst()
+                    .get();
+        }
+
+        public static String asString(Category category) {
+            return category.col + " - " + category;
+        }
     }
 
     public static void main(String[] args) {
 
         Path file = Paths.get("c:", "IdeaProjects", "MonthlyExpenses", "src", "main", "java", "test.csv");
+        Path monthlyExpenses = Paths.get(
+                "c:", "Users", "shick", "dropbox", "tracking", "Monthly Expenses 2020_test.xlsx"
+        );
 
-        List<String> lines = new ArrayList<>();
+        Map<Month, Map<Category, StringBuilder>> commentsToAdd = new HashMap<>();
 
-        try (CSVParser parser = new CSVParser(Files.newBufferedReader(file), CSVFormat.DEFAULT.withFirstRecordAsHeader()))
-        {
+        try (
+                CSVParser parser = new CSVParser(Files.newBufferedReader(file), CSVFormat.DEFAULT.withFirstRecordAsHeader());
+                XSSFWorkbook workbook = new XSSFWorkbook(new FileInputStream(monthlyExpenses.toFile()));
+        ) {
+            FormulaEvaluator evaluator = workbook.getCreationHelper().createFormulaEvaluator();
+            XSSFSheet sheet = workbook.getSheetAt(0);
+
+            Scanner in = new Scanner(System.in);
+
             for (CSVRecord record : parser) {
                 System.out.println(record);
+
+                String[] dates = record.get(0).split(",");
+                LocalDate transactionDate = LocalDate.of(Integer.parseInt(dates[2]), Integer.parseInt(dates[0]), Integer.parseInt(dates[1]));
+                String description = record.get(2);
+                String getType = record.get(4);
+                String getAmount = record.get(5);
+
+                int rowNumber = transactionDate.getMonthValue();
+
+                XSSFRow row = sheet.getRow(rowNumber);
+
+                System.out.println("Choose a category for " + description + " " + transactionDate + " " + getAmount);
+                Stream.of(Category.values())
+                        .map(Category::asString)
+                        .forEach(System.out::println);
+                String userValue = in.next();
+                try {
+                    int col = Integer.parseInt(userValue);
+                    Category cat = Category.getCategoryFromCol(col);
+                    System.out.println("What's the memo note?");
+                    String commentDescription = in.next();
+
+                    Map<Category, StringBuilder> t = commentsToAdd.getOrDefault(transactionDate.getMonth(), new HashMap<>());
+                    StringBuilder s = t.getOrDefault(cat, new StringBuilder(""));
+                    s.append(commentDescription + " " + getAmount + " " + transactionDate.getMonthValue() + "/" + transactionDate.getDayOfMonth() + "\r\n");
+                    t.put(cat, s);
+                    commentsToAdd.put(transactionDate.getMonth(), t);
+
+                    String currentFormula = "";
+                    if (row.getCell(col).getNumericCellValue() != 0)
+                        currentFormula = row.getCell(col).getCellFormula();
+                    currentFormula += "+ " + getAmount;
+                    row.getCell(col).setCellFormula(currentFormula);
+                } catch (NumberFormatException e) {
+                    System.exit(0);
+                }
+
             }
-        } catch (IOException e) {
+
+            evaluator.evaluateAll();
+            workbook.write(new FileOutputStream(monthlyExpenses.toFile()));
+        } catch (Exception e) {
             System.out.println(e);
         }
 
-        Path monthlyExpenses = Paths.get(
-                "c:", "Users", "shick", "dropbox", "tracking", "Monthly Expenses 2020.xlsx"
-        );
-
         try {
-            Workbook workbook = new XSSFWorkbook(monthlyExpenses.toFile());
-            Sheet sheet = workbook.getSheetAt(0);
+            FileWriter writer = new FileWriter("test.txt");
+            commentsToAdd.forEach((k,v) -> {
+                try
+                {
+                    writer.append(k.toString());
+                    writer.append("\r\n");
+                    v.forEach((kk,vv) -> {
+                        try
+                        {
+                            writer.append(kk.toString());
+                            writer.append("\r\n");
+                            writer.append(String.valueOf(vv));
+                            writer.append("\r\n");
+                        } catch (IOException e)
+                        {
+                            e.printStackTrace();
+                        }
+                    });
+                } catch (IOException e)
+                {
+                    e.printStackTrace();
+                }
 
+                try
+                {
+                    writer.close();
+                } catch (IOException e)
+                {
+                    e.printStackTrace();
+                }
 
-        } catch (Exception e) {
+            });
+        } catch (IOException e) {
 
         }
-
-
-
     }
-
-
 }
