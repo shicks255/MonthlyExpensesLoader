@@ -103,11 +103,17 @@ public class Runner {
                     t.put(cat, s);
                     commentsToAdd.put(transactionDate.getMonth(), t);
 
-                    String currentFormula = "";
-                    if (row.getCell(col).getNumericCellValue() != 0)
+                    String currentFormula = "SUM()";
+                    boolean newFormula = true;
+                    if (row.getCell(col).getNumericCellValue() != 0) {
+                           newFormula = false;
                         currentFormula = row.getCell(col).getCellFormula();
-                    currentFormula += " " + getAmount;
+                    }
+                    currentFormula =
+                            currentFormula.substring(0,currentFormula.lastIndexOf(")")) + (newFormula ? "" : ",") + getAmount + ")";
                     row.getCell(col).setCellFormula(currentFormula);
+                    evaluator.setDebugEvaluationOutputForNextEval(true);
+                    evaluator.evaluateFormulaCell(row.getCell(col));
                 } catch (NumberFormatException e) {
                     System.exit(0);
                 }
