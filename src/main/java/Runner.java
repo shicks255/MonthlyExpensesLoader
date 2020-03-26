@@ -2,6 +2,7 @@ import org.apache.commons.csv.CSVFormat;
 import org.apache.commons.csv.CSVParser;
 import org.apache.commons.csv.CSVRecord;
 import org.apache.poi.ss.usermodel.FormulaEvaluator;
+import org.apache.poi.xssf.model.CommentsTable;
 import org.apache.poi.xssf.usermodel.XSSFRow;
 import org.apache.poi.xssf.usermodel.XSSFSheet;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
@@ -12,6 +13,7 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.time.LocalDate;
 import java.time.Month;
+import java.time.format.DateTimeFormatter;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Scanner;
@@ -75,8 +77,7 @@ public class Runner {
             for (CSVRecord record : parser) {
                 System.out.println(record);
 
-                String[] dates = record.get(0).split(",");
-                LocalDate transactionDate = LocalDate.of(Integer.parseInt(dates[2]), Integer.parseInt(dates[0]), Integer.parseInt(dates[1]));
+                LocalDate transactionDate = LocalDate.parse(record.get(0), DateTimeFormatter.ofPattern("MM/dd/yyyy"));
                 String description = record.get(2);
                 String getType = record.get(4);
                 String getAmount = record.get(5);
@@ -105,12 +106,11 @@ public class Runner {
                     String currentFormula = "";
                     if (row.getCell(col).getNumericCellValue() != 0)
                         currentFormula = row.getCell(col).getCellFormula();
-                    currentFormula += "+ " + getAmount;
+                    currentFormula += " " + getAmount;
                     row.getCell(col).setCellFormula(currentFormula);
                 } catch (NumberFormatException e) {
                     System.exit(0);
                 }
-
             }
 
             evaluator.evaluateAll();
@@ -119,39 +119,22 @@ public class Runner {
             System.out.println(e);
         }
 
-        try {
-            FileWriter writer = new FileWriter("test.txt");
-            commentsToAdd.forEach((k,v) -> {
-                try
+        try(FileWriter writer = new FileWriter("test.txt"))
+        {
+            for (Map.Entry<Month, Map<Category, StringBuilder>> monthAndValues : commentsToAdd.entrySet())
+            {
+                writer.append(monthAndValues.getKey().toString());
+                writer.append("\r\n");
+
+                for (Map.Entry<Category, StringBuilder> catAndMemo : monthAndValues.getValue().entrySet())
                 {
-                    writer.append(k.toString());
+                    writer.append(Category.asString(catAndMemo.getKey()));
                     writer.append("\r\n");
-                    v.forEach((kk,vv) -> {
-                        try
-                        {
-                            writer.append(kk.toString());
-                            writer.append("\r\n");
-                            writer.append(String.valueOf(vv));
-                            writer.append("\r\n");
-                        } catch (IOException e)
-                        {
-                            e.printStackTrace();
-                        }
-                    });
-                } catch (IOException e)
-                {
-                    e.printStackTrace();
+                    writer.append(String.valueOf(catAndMemo.getValue()));
+                    writer.append("\r\n");
                 }
+            }
 
-                try
-                {
-                    writer.close();
-                } catch (IOException e)
-                {
-                    e.printStackTrace();
-                }
-
-            });
         } catch (IOException e) {
 
         }
