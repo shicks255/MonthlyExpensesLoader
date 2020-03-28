@@ -1,13 +1,15 @@
 import org.apache.commons.csv.CSVFormat;
 import org.apache.commons.csv.CSVParser;
 import org.apache.commons.csv.CSVRecord;
-import org.apache.poi.ss.usermodel.FormulaEvaluator;
-import org.apache.poi.xssf.model.CommentsTable;
+import org.apache.poi.xssf.usermodel.XSSFFormulaEvaluator;
 import org.apache.poi.xssf.usermodel.XSSFRow;
 import org.apache.poi.xssf.usermodel.XSSFSheet;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 
-import java.io.*;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
+import java.io.FileWriter;
+import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -69,7 +71,6 @@ public class Runner {
                 CSVParser parser = new CSVParser(Files.newBufferedReader(file), CSVFormat.DEFAULT.withFirstRecordAsHeader());
                 XSSFWorkbook workbook = new XSSFWorkbook(new FileInputStream(monthlyExpenses.toFile()));
         ) {
-            FormulaEvaluator evaluator = workbook.getCreationHelper().createFormulaEvaluator();
             XSSFSheet sheet = workbook.getSheetAt(0);
 
             Scanner in = new Scanner(System.in);
@@ -103,23 +104,23 @@ public class Runner {
                     t.put(cat, s);
                     commentsToAdd.put(transactionDate.getMonth(), t);
 
-                    String currentFormula = "SUM()";
+                    String currentFormula = "";
                     boolean newFormula = true;
                     if (row.getCell(col).getNumericCellValue() != 0) {
-                           newFormula = false;
                         currentFormula = row.getCell(col).getCellFormula();
+                        newFormula = false;
                     }
-                    currentFormula =
-                            currentFormula.substring(0,currentFormula.lastIndexOf(")")) + (newFormula ? "" : ",") + getAmount + ")";
+                    currentFormula += (!newFormula ? " " : "") + getAmount;
                     row.getCell(col).setCellFormula(currentFormula);
-                    evaluator.setDebugEvaluationOutputForNextEval(true);
-                    evaluator.evaluateFormulaCell(row.getCell(col));
+
+                    XSSFFormulaEvaluator.evaluateAllFormulaCells(workbook);
+                    System.out.println(row.getCell(col).getCellFormula());
                 } catch (NumberFormatException e) {
                     System.exit(0);
                 }
             }
 
-            evaluator.evaluateAll();
+            XSSFFormulaEvaluator.evaluateAllFormulaCells(workbook);
             workbook.write(new FileOutputStream(monthlyExpenses.toFile()));
         } catch (Exception e) {
             System.out.println(e);
