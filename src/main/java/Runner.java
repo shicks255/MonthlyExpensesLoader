@@ -1,23 +1,21 @@
 import org.apache.commons.csv.CSVFormat;
 import org.apache.commons.csv.CSVParser;
 import org.apache.commons.csv.CSVRecord;
+import org.apache.poi.ss.usermodel.Row;
 import org.apache.poi.xssf.usermodel.XSSFFormulaEvaluator;
 import org.apache.poi.xssf.usermodel.XSSFRow;
 import org.apache.poi.xssf.usermodel.XSSFSheet;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 
-import java.io.FileInputStream;
-import java.io.FileOutputStream;
-import java.io.FileWriter;
-import java.io.IOException;
+import java.io.*;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.time.LocalDate;
 import java.time.Month;
-import java.time.format.DateTimeFormatter;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Properties;
 import java.util.Scanner;
 import java.util.stream.Stream;
 
@@ -29,7 +27,7 @@ public class Runner {
         FOOD(3),
         GAS(4),
         RENT(5),
-        CONVIENT_STORE(7),
+        CONVIENENT_STORE(7),
         CLOTHES(8),
         OTHER(9);
 
@@ -59,71 +57,58 @@ public class Runner {
     }
 
     public static void main(String[] args) {
+        Properties properties = new Properties();
+        InputStream resourceStream = Thread.currentThread().getContextClassLoader()
+                .getResourceAsStream("app.properties");
+        try { properties.load(resourceStream);}
+        catch (IOException e) { e.printStackTrace(); }
 
-        Path file = Paths.get("c:", "IdeaProjects", "MonthlyExpenses", "src", "main", "java", "test.csv");
-        Path monthlyExpenses = Paths.get(
-                "c:", "Users", "shick", "dropbox", "tracking", "Monthly Expenses 2020_test.xlsx"
-        );
+        RecordParsingStrategyFactory factory = new RecordParsingStrategyFactory();
+        ParsingStrategy parsingStrategy = factory.getParsingStrategy(properties.getProperty("strategy"));
 
+        Path csv = Paths.get((String) properties.get("csvFile"));
+        Path monthlyExpenses = Paths.get((String) properties.get("monthlyExpensesFile"));
+
+        loadExpensesIntoFile(parsingStrategy, csv, monthlyExpenses);
+    }
+
+    public static void loadExpensesIntoFile(ParsingStrategy parsingBehavior, Path csv, Path expenses) {
         Map<Month, Map<Category, StringBuilder>> commentsToAdd = new HashMap<>();
+        Scanner in = new Scanner(System.in);
 
-        try (
-                CSVParser parser = new CSVParser(Files.newBufferedReader(file), CSVFormat.DEFAULT.withFirstRecordAsHeader());
-                XSSFWorkbook workbook = new XSSFWorkbook(new FileInputStream(monthlyExpenses.toFile()));
-        ) {
+        try (CSVParser parser = new CSVParser(Files.newBufferedReader(csv), CSVFormat.DEFAULT.withFirstRecordAsHeader());
+                XSSFWorkbook workbook = new XSSFWorkbook(new FileInputStream(expenses.toFile())))
+        {
             XSSFSheet sheet = workbook.getSheetAt(0);
 
-            Scanner in = new Scanner(System.in);
-
             for (CSVRecord record : parser) {
-                System.out.println(record);
-
-                LocalDate transactionDate = LocalDate.parse(record.get(0), DateTimeFormatter.ofPattern("MM/dd/yyyy"));
-                String description = record.get(2);
-                String getType = record.get(4);
-                String getAmount = record.get(5);
-
-                int rowNumber = transactionDate.getMonthValue();
-
+                Item item = parsingBehavior.parse(record);
+                int rowNumber = item.getTransactionDate().getMonthValue();
                 XSSFRow row = sheet.getRow(rowNumber);
 
-                System.out.println("Choose a category for " + description + " " + transactionDate + " " + getAmount);
-                Stream.of(Category.values())
-                        .map(Category::asString)
-                        .forEach(System.out::println);
-                String userValue = in.next();
+                String userValue = promptUserForCategory(item, in);
                 try {
-                    int col = Integer.parseInt(userValue);
-                    Category cat = Category.getCategoryFromCol(col);
-                    System.out.println("What's the memo note?");
-                    String commentDescription = in.next();
+                    int userCategoryNumber = Integer.parseInt(userValue);
+                    Category cat = Category.getCategoryFromCol(userCategoryNumber);
+                    item.setCategory(cat);
 
-                    Map<Category, StringBuilder> t = commentsToAdd.getOrDefault(transactionDate.getMonth(), new HashMap<>());
-                    StringBuilder s = t.getOrDefault(cat, new StringBuilder(""));
-                    s.append(commentDescription + " " + getAmount + " " + transactionDate.getMonthValue() + "/" + transactionDate.getDayOfMonth() + "\r\n");
-                    t.put(cat, s);
-                    commentsToAdd.put(transactionDate.getMonth(), t);
+                    item.setMemo(promptUserForMemo(in));
+                    addToMemo(commentsToAdd, item);
 
-                    String currentFormula = "";
-                    boolean newFormula = true;
-                    if (row.getCell(col).getNumericCellValue() != 0) {
-                        currentFormula = row.getCell(col).getCellFormula();
-                        newFormula = false;
-                    }
-                    currentFormula += (!newFormula ? " " : "") + getAmount;
-                    row.getCell(col).setCellFormula(currentFormula);
+                    String formula = getFormula(row, userCategoryNumber, item);
+                    row.getCell(userCategoryNumber).setCellFormula(formula);
 
                     XSSFFormulaEvaluator.evaluateAllFormulaCells(workbook);
-                    System.out.println(row.getCell(col).getCellFormula());
+                    System.out.println(row.getCell(userCategoryNumber).getCellFormula());
                 } catch (NumberFormatException e) {
                     System.exit(0);
                 }
             }
 
             XSSFFormulaEvaluator.evaluateAllFormulaCells(workbook);
-            workbook.write(new FileOutputStream(monthlyExpenses.toFile()));
+            workbook.write(new FileOutputStream(expenses.toFile()));
         } catch (Exception e) {
-            System.out.println(e);
+            e.printStackTrace();
         }
 
         try(FileWriter writer = new FileWriter("test.txt"))
@@ -143,7 +128,48 @@ public class Runner {
             }
 
         } catch (IOException e) {
-
+            e.printStackTrace();
         }
+    }
+
+    private static void addToMemo(Map<Month, Map<Category, StringBuilder>> commentsToAdd, Item item) {
+        LocalDate transactionDate = item.getTransactionDate();
+        String memoNote = String.format("%s %s %d/%d\r\n", item.getMemo(),
+                item.getAmount(), transactionDate.getMonthValue(),
+                transactionDate.getDayOfMonth());
+
+        commentsToAdd.merge(transactionDate.getMonth(), new HashMap<>(Map.of(item.getCategory(), new StringBuilder(memoNote))), (m1,m2) -> {
+            m1.merge(item.getCategory(), new StringBuilder(memoNote), (s1, s2) -> {
+                s1.append(memoNote);
+                return s1;
+            });
+            return m1;
+        });
+    }
+
+    private static String promptUserForCategory(Item item, Scanner in) {
+        System.out.println(item.getUserPrompt());
+        Stream.of(Category.values())
+                .map(Category::asString)
+                .forEach(System.out::println);
+
+        return in.next();
+    }
+
+    private static String promptUserForMemo(Scanner in) {
+        System.out.println("What's the memo note?");
+        String commentDescription = in.next();
+        return commentDescription;
+    }
+
+    private static String getFormula(Row row, int userCategoryNumber, Item item) {
+        String currentFormula = "";
+        boolean newFormula = true;
+        if (row.getCell(userCategoryNumber).getNumericCellValue() != 0) {
+            currentFormula = row.getCell(userCategoryNumber).getCellFormula();
+            newFormula = false;
+        }
+        currentFormula += (!newFormula ? " " : "") + item.getAmount();
+        return currentFormula;
     }
 }
