@@ -77,7 +77,7 @@ public class Runner {
         Scanner in = new Scanner(System.in);
 
         try (CSVParser parser = new CSVParser(Files.newBufferedReader(csv), CSVFormat.DEFAULT.withFirstRecordAsHeader());
-                XSSFWorkbook workbook = new XSSFWorkbook(new FileInputStream(expenses.toFile())))
+             XSSFWorkbook workbook = new XSSFWorkbook(new FileInputStream(expenses.toFile())))
         {
             XSSFSheet sheet = workbook.getSheetAt(0);
 
@@ -86,23 +86,18 @@ public class Runner {
                 int rowNumber = item.getTransactionDate().getMonthValue();
                 XSSFRow row = sheet.getRow(rowNumber);
 
-                String userValue = promptUserForCategory(item, in);
-                try {
-                    int userCategoryNumber = Integer.parseInt(userValue);
-                    Category cat = Category.getCategoryFromCol(userCategoryNumber);
-                    item.setCategory(cat);
+                int userCategoryNumber = promptUserForCategory(item, in);
+                Category cat = Category.getCategoryFromCol(userCategoryNumber);
+                item.setCategory(cat);
 
-                    item.setMemo(promptUserForMemo(in));
-                    addToMemo(commentsToAdd, item);
+                item.setMemo(promptUserForMemo(in));
+                addToMemo(commentsToAdd, item);
 
-                    String formula = getFormula(row, userCategoryNumber, item);
-                    row.getCell(userCategoryNumber).setCellFormula(formula);
+                String formula = getFormula(row, userCategoryNumber, item);
+                row.getCell(userCategoryNumber).setCellFormula(formula);
 
-                    XSSFFormulaEvaluator.evaluateAllFormulaCells(workbook);
-                    System.out.println(row.getCell(userCategoryNumber).getCellFormula());
-                } catch (NumberFormatException e) {
-                    System.exit(0);
-                }
+                XSSFFormulaEvaluator.evaluateAllFormulaCells(workbook);
+                System.out.println(row.getCell(userCategoryNumber).getCellFormula());
             }
 
             XSSFFormulaEvaluator.evaluateAllFormulaCells(workbook);
@@ -134,31 +129,54 @@ public class Runner {
 
     private static void addToMemo(Map<Month, Map<Category, StringBuilder>> commentsToAdd, Item item) {
         LocalDate transactionDate = item.getTransactionDate();
-        String memoNote = String.format("%s %s %d/%d\r\n", item.getMemo(),
-                item.getAmount(), transactionDate.getMonthValue(),
-                transactionDate.getDayOfMonth());
 
-        commentsToAdd.merge(transactionDate.getMonth(), new HashMap<>(Map.of(item.getCategory(), new StringBuilder(memoNote))), (m1,m2) -> {
-            m1.merge(item.getCategory(), new StringBuilder(memoNote), (s1, s2) -> {
-                s1.append(memoNote);
-                return s1;
+        if (item.getMemo().length() > 0) {
+            String memoNote = String.format("%s %s %d/%d\r\n", item.getMemo(),
+                    item.getAmount(), transactionDate.getMonthValue(),
+                    transactionDate.getDayOfMonth());
+
+            commentsToAdd.merge(transactionDate.getMonth(), new HashMap<>(Map.of(item.getCategory(), new StringBuilder(memoNote))), (m1,m2) -> {
+                m1.merge(item.getCategory(), new StringBuilder(memoNote), (s1, s2) -> {
+                    s1.append(memoNote);
+                    return s1;
+                });
+                return m1;
             });
-            return m1;
-        });
+        }
     }
 
-    private static String promptUserForCategory(Item item, Scanner in) {
-        System.out.println(item.getUserPrompt());
-        Stream.of(Category.values())
-                .map(Category::asString)
-                .forEach(System.out::println);
+    private static int promptUserForCategory(Item item, Scanner in) {
+        boolean keepGoing = true;
+        Integer x = null;
 
-        return in.next();
+        do {
+            System.out.println(item.getUserPrompt() + " or 'q' to quit");
+            Stream.of(Category.values())
+                    .map(Category::asString)
+                    .forEach(System.out::println);
+
+            String input = in.next();
+
+            if (input.equalsIgnoreCase("q"))
+                System.exit(0);
+
+            try {
+                x = Integer.parseInt(input);
+                keepGoing = false;
+            } catch (NumberFormatException e) {
+                System.out.println("Please enter a number for the category");
+            }
+
+        } while (keepGoing);
+
+        return x;
     }
 
     private static String promptUserForMemo(Scanner in) {
-        System.out.println("What's the memo note?");
+        System.out.println("What's the memo note? Type n for no memo");
         String commentDescription = in.next();
+        if (commentDescription.equalsIgnoreCase("n"))
+            return "";
         return commentDescription;
     }
 

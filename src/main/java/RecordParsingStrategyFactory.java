@@ -4,10 +4,15 @@ import java.time.format.DateTimeFormatter;
 public class RecordParsingStrategyFactory {
 
     public ParsingStrategy getParsingStrategy(String fileOrigin) {
-        return switch (fileOrigin) {
-            case "chase" -> getChaseParser();
-            default -> getChaseParser();
-        };
+        ParsingStrategy toReturn = null;
+
+        switch (fileOrigin) {
+            case ("chase"):
+                toReturn = getChaseParser();
+                break;
+        }
+
+        return toReturn;
     }
 
     private ParsingStrategy getChaseParser() {
