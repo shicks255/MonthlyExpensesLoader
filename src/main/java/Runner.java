@@ -89,7 +89,6 @@ public class Runner {
                 int userCategoryNumber = promptUserForCategory(item, in);
                 Category cat = Category.getCategoryFromCol(userCategoryNumber);
                 item.setCategory(cat);
-
                 item.setMemo(promptUserForMemo(in));
                 addToMemo(commentsToAdd, item);
 
@@ -174,7 +173,8 @@ public class Runner {
 
     private static String promptUserForMemo(Scanner in) {
         System.out.println("What's the memo note? Type n for no memo");
-        String commentDescription = in.next();
+        in.nextLine();
+        String commentDescription = in.nextLine();
         if (commentDescription.equalsIgnoreCase("n"))
             return "";
         return commentDescription;
