@@ -6,7 +6,7 @@ public class Item {
     private String description = "";
     private String type = "";
     private String amount = "";
-    private Runner.Category m_category;
+    private Category m_category;
     private String memo;
 
 
@@ -46,11 +46,11 @@ public class Item {
         this.amount = amount;
     }
 
-    public Runner.Category getCategory() {
+    public Category getCategory() {
         return m_category;
     }
 
-    public void setCategory(Runner.Category category) {
+    public void setCategory(Category category) {
         m_category = category;
     }
 
