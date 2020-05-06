@@ -9,7 +9,7 @@ import java.util.Map;
 
 public class ExpenseWriter {
 
-    private String fileToWrite;
+    private final String fileToWrite;
 
     public ExpenseWriter(String fileToWrite) {
         this.fileToWrite = fileToWrite;

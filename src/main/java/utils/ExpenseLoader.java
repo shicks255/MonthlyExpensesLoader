@@ -25,10 +25,10 @@ import java.util.Map;
 
 public class ExpenseLoader {
 
-    private ParsingStrategy m_parsingStrategy;
-    private UserInteractor m_userInteractor;
-    private Path bankCsv;
-    private Path expenseCsv;
+    private final ParsingStrategy m_parsingStrategy;
+    private final UserInteractor m_userInteractor;
+    private final Path bankCsv;
+    private final Path expenseCsv;
 
     public ExpenseLoader(ParsingStrategy parsingStrategy, Path csvPath, Path expsensePath, UserInteractor userInteractor) {
         this.m_parsingStrategy = parsingStrategy;

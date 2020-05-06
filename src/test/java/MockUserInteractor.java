@@ -5,7 +5,7 @@ import java.util.Random;
 
 public class MockUserInteractor implements UserInteractor {
 
-    private Random random = new Random();
+    private final Random random = new Random();
 
     @Override
     public int promptUserForCategory(Item item) {
