@@ -7,6 +7,7 @@ import models.Category;
 import utils.ExpenseLoader;
 import utils.ExpenseWriter;
 
+import java.io.File;
 import java.nio.file.Path;
 import java.time.Month;
 import java.util.Map;
@@ -18,9 +19,9 @@ public class StepDefs {
     RecordParsingStrategyFactory factory = new RecordParsingStrategyFactory();
     ParsingStrategy parsingStrategy = factory.getParsingStrategy("chase");
     MockUserInteractor userInteractor = new MockUserInteractor();
-    Path bankCsv = Path.of("src\\test\\java\\testBankCsv.csv");
-    Path emptyBankCsv = Path.of("src\\test\\java\\testBankCsvEmpty.csv");
-    Path monthlyExpenses = Path.of("C:\\Users\\shick\\dropbox\\tracking\\MonthlyExpenses2020test.xlsx");
+    Path bankCsv = Path.of("src" + File.separator + "test" + File.separator + "java" + File.separator + "testBankCsv.csv");
+    Path emptyBankCsv = Path.of("src" + File.separator + "" + File.separator + "test" + File.separator + "" + File.separator + "java" + File.separator + "" + File.separator + "testBankCsvEmpty.csv");
+    Path monthlyExpenses = Path.of("C:" + File.separator + "" + File.separator + "Users" + File.separator + "" + File.separator + "shick" + File.separator + "" + File.separator + "dropbox" + File.separator + "" + File.separator + "tracking" + File.separator + "" + File.separator + "MonthlyExpenses2020test.xlsx");
     Map<Month, Map<Category, StringBuilder>> comments;
 
     ExpenseLoader loader;
