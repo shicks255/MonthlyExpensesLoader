@@ -1,3 +1,7 @@
+package helpers.parsing;
+
+import models.Item;
+
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 

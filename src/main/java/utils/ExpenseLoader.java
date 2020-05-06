@@ -1,3 +1,9 @@
+package utils;
+
+import helpers.parsing.ParsingStrategy;
+import helpers.userInteraction.UserInteractor;
+import models.Category;
+import models.Item;
 import org.apache.commons.csv.CSVFormat;
 import org.apache.commons.csv.CSVParser;
 import org.apache.commons.csv.CSVRecord;
@@ -9,7 +15,6 @@ import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
-import java.io.FileWriter;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -17,24 +22,23 @@ import java.time.LocalDate;
 import java.time.Month;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.Scanner;
-import java.util.stream.Stream;
 
 public class ExpenseLoader {
 
     private ParsingStrategy m_parsingStrategy;
+    private UserInteractor m_userInteractor;
     private Path bankCsv;
     private Path expenseCsv;
 
-    public ExpenseLoader(ParsingStrategy parsingStrategy, Path csvPath, Path expsensePath) {
+    public ExpenseLoader(ParsingStrategy parsingStrategy, Path csvPath, Path expsensePath, UserInteractor userInteractor) {
         this.m_parsingStrategy = parsingStrategy;
+        this.m_userInteractor = userInteractor;
         this.bankCsv = csvPath;
         this.expenseCsv = expsensePath;
     }
 
     public Map<Month, Map<Category,StringBuilder>> loadExpensesIntoFile() throws IOException {
         Map<Month, Map<Category, StringBuilder>> commentsToAdd = new HashMap<>();
-        Scanner in = new Scanner(System.in);
 
         try (CSVParser parser = new CSVParser(Files.newBufferedReader(bankCsv), CSVFormat.DEFAULT.withFirstRecordAsHeader());
              XSSFWorkbook workbook = new XSSFWorkbook(new FileInputStream(expenseCsv.toFile())))
@@ -46,17 +50,16 @@ public class ExpenseLoader {
                 int rowNumber = item.getTransactionDate().getMonthValue();
                 XSSFRow row = sheet.getRow(rowNumber);
 
-                int userCategoryNumber = promptUserForCategory(item, in);
+                int userCategoryNumber = m_userInteractor.promptUserForCategory(item);
                 Category cat = Category.getCategoryFromCol(userCategoryNumber);
                 item.setCategory(cat);
-                item.setMemo(promptUserForMemo(in));
+                item.setMemo(m_userInteractor.promptUserForMemo());
                 addToMemo(commentsToAdd, item);
 
                 String formula = getFormula(row, userCategoryNumber, item);
                 row.getCell(userCategoryNumber).setCellFormula(formula);
 
                 XSSFFormulaEvaluator.evaluateAllFormulaCells(workbook);
-                System.out.println(row.getCell(userCategoryNumber).getCellFormula());
             }
 
             XSSFFormulaEvaluator.evaluateAllFormulaCells(workbook);
@@ -87,42 +90,6 @@ public class ExpenseLoader {
         }
     }
 
-    private int promptUserForCategory(Item item, Scanner in) {
-        boolean keepGoing = true;
-        Integer x = null;
-
-        do {
-            System.out.println(item.getUserPrompt() + " or 'q' to quit");
-            Stream.of(Category.values())
-                    .map(Category::asString)
-                    .forEach(System.out::println);
-
-            String input = in.next();
-
-            if (input.equalsIgnoreCase("q"))
-                System.exit(0);
-
-            try {
-                x = Integer.parseInt(input);
-                keepGoing = false;
-            } catch (NumberFormatException e) {
-                System.out.println("Please enter a number for the category");
-            }
-
-        } while (keepGoing);
-
-        return x;
-    }
-
-    private String promptUserForMemo(Scanner in) {
-        System.out.println("What's the memo note? Type n for no memo");
-        in.nextLine();
-        String commentDescription = in.nextLine();
-        if (commentDescription.equalsIgnoreCase("n"))
-            return "";
-        return commentDescription;
-    }
-
     private String getFormula(Row row, int userCategoryNumber, Item item) {
         String currentFormula = "";
         boolean newFormula = true;
@@ -133,5 +100,4 @@ public class ExpenseLoader {
         currentFormula += (!newFormula ? " " : "") + item.getAmount();
         return currentFormula;
     }
-
 }

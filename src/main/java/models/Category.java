@@ -1,3 +1,5 @@
+package models;
+
 import java.util.stream.Stream;
 
 public enum Category {
@@ -15,14 +17,14 @@ public enum Category {
     }
     int col;
 
-    static Category getCategoryFromCol(int column) {
+    public static Category getCategoryFromCol(int column) {
         return Stream.of(values())
                 .filter(x -> x.col == column)
                 .findFirst()
                 .get();
     }
 
-    static int getColFromCategory(Category category) {
+    public static int getColFromCategory(Category category) {
         return Stream.of(values())
                 .filter(x -> x != category)
                 .map(x -> x.col)
@@ -30,7 +32,7 @@ public enum Category {
                 .get();
     }
 
-    static String asString(Category category) {
+    public static String asString(Category category) {
         return category.col + " - " + category;
     }
 }

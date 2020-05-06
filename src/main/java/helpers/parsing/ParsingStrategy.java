@@ -1,3 +1,6 @@
+package helpers.parsing;
+
+import models.Item;
 import org.apache.commons.csv.CSVRecord;
 
 @FunctionalInterface

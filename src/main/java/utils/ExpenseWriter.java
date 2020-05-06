@@ -1,3 +1,7 @@
+package utils;
+
+import models.Category;
+
 import java.io.FileWriter;
 import java.io.IOException;
 import java.time.Month;
@@ -13,8 +17,7 @@ public class ExpenseWriter {
 
     public void writeExpensesToFile(Map<Month, Map<Category, StringBuilder>> commentsToAdd) throws IOException {
 
-        try(
-                FileWriter writer = new FileWriter(fileToWrite))
+        try(FileWriter writer = new FileWriter(fileToWrite))
         {
             for (Map.Entry<Month, Map<Category, StringBuilder>> monthAndValues : commentsToAdd.entrySet())
             {
@@ -33,7 +36,6 @@ public class ExpenseWriter {
         } catch (
                 IOException e) {
             e.printStackTrace();
-
             throw e;
         }
     }

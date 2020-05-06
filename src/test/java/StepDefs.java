@@ -1,6 +1,11 @@
+import helpers.parsing.ParsingStrategy;
+import helpers.parsing.RecordParsingStrategyFactory;
 import io.cucumber.java.en.Given;
 import io.cucumber.java.en.Then;
 import io.cucumber.java.en.When;
+import models.Category;
+import utils.ExpenseLoader;
+import utils.ExpenseWriter;
 
 import java.nio.file.Path;
 import java.time.Month;
@@ -12,8 +17,11 @@ public class StepDefs {
 
     RecordParsingStrategyFactory factory = new RecordParsingStrategyFactory();
     ParsingStrategy parsingStrategy = factory.getParsingStrategy("chase");
-    Path bankCsv = Path.of("testBankCsv.csv");
-    Path monthlyExpenses = Path.of("testMonthly.csv");
+    MockUserInteractor userInteractor = new MockUserInteractor();
+    Path bankCsv = Path.of("src\\test\\java\\testBankCsv.csv");
+    Path emptyBankCsv = Path.of("src\\test\\java\\testBankCsvEmpty.csv");
+    Path monthlyExpenses = Path.of("C:\\Users\\shick\\dropbox\\tracking\\MonthlyExpenses2020test.xlsx");
+    Map<Month, Map<Category, StringBuilder>> comments;
 
     ExpenseLoader loader;
     ExpenseWriter writer;
@@ -22,7 +30,19 @@ public class StepDefs {
     public void call_loader_with_empty_csv() {
         try
         {
-            loader = new ExpenseLoader(parsingStrategy, bankCsv, monthlyExpenses);
+            loader = new ExpenseLoader(parsingStrategy, emptyBankCsv, monthlyExpenses, userInteractor);
+            writer = new ExpenseWriter("test.txt");
+        } catch (Exception e)
+        {
+            assertTrue(false);
+        }
+    }
+
+    @Given("call loader with data csv")
+    public void call_loader_with_data_csv() {
+        try
+        {
+            loader = new ExpenseLoader(parsingStrategy, bankCsv, monthlyExpenses, userInteractor);
             writer = new ExpenseWriter("test.txt");
         } catch (Exception e)
         {
@@ -34,7 +54,7 @@ public class StepDefs {
     public void we_load_expenses() {
         try
         {
-            Map<Month, Map<Category, StringBuilder>> comments = loader.loadExpensesIntoFile();
+            comments = loader.loadExpensesIntoFile();
             writer.writeExpensesToFile(comments);
         } catch (Exception e)
         {
@@ -45,6 +65,11 @@ public class StepDefs {
     @Then("result should be empty")
     public void result_should_be_empty() {
         Path file = Path.of("text.txt");
-        System.out.println(file);
+        assertTrue(comments.isEmpty());
+    }
+
+    @Then("result should not be empty")
+    public void result_should_not_be_empty() {
+        assertFalse(comments.isEmpty());
     }
 }
