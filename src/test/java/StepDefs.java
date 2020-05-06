@@ -20,8 +20,8 @@ public class StepDefs {
     ParsingStrategy parsingStrategy = factory.getParsingStrategy("chase");
     MockUserInteractor userInteractor = new MockUserInteractor();
     Path bankCsv = Path.of("src" + File.separator + "test" + File.separator + "java" + File.separator + "testBankCsv.csv");
-    Path emptyBankCsv = Path.of("src" + File.separator + "" + File.separator + "test" + File.separator + "" + File.separator + "java" + File.separator + "" + File.separator + "testBankCsvEmpty.csv");
-    Path monthlyExpenses = Path.of("C:" + File.separator + "" + File.separator + "Users" + File.separator + "" + File.separator + "shick" + File.separator + "" + File.separator + "dropbox" + File.separator + "" + File.separator + "tracking" + File.separator + "" + File.separator + "MonthlyExpenses2020test.xlsx");
+    Path emptyBankCsv = Path.of("src" + File.separator + "test" + File.separator + "java" + File.separator + "testBankCsvEmpty.csv");
+    Path monthlyExpenses = Path.of("src" + File.separator + "test" + File.separator + "java" + File.separator + "MonthlyExpenses2020test.xlsx");
     Map<Month, Map<Category, StringBuilder>> comments;
 
     ExpenseLoader loader;
