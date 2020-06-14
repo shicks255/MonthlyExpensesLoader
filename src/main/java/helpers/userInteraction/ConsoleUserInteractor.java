@@ -3,12 +3,13 @@ package helpers.userInteraction;
 import models.Category;
 import models.Item;
 
+import java.nio.charset.Charset;
 import java.util.Scanner;
 import java.util.stream.Stream;
 
 public class ConsoleUserInteractor implements UserInteractor {
 
-    Scanner in = new Scanner(System.in);
+    Scanner in = new Scanner(System.in, Charset.forName("UTF-8"));
 
     @Override
     public int promptUserForCategory(Item item) {

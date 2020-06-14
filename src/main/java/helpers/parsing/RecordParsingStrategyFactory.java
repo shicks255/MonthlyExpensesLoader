@@ -23,7 +23,7 @@ public class RecordParsingStrategyFactory {
         return (record -> {
             Item item = new Item();
 
-            LocalDate transactionDate = LocalDate.parse(record.get(0), DateTimeFormatter.ofPattern("MM/dd/yyyy"));
+            LocalDate transactionDate = LocalDate.parse(record.get(0), DateTimeFormatter.ofPattern("MM,dd,yyyy"));
             String description = record.get(2);
             String type = record.get(4);
             String amount = record.get(5);
