@@ -7,10 +7,17 @@ public enum Category {
     PAY(2),
     FOOD(3),
     GAS(4),
-    RENT(5),
-    CONVIENENT_STORE(7),
-    CLOTHES(8),
-    OTHER(9);
+    RENT(6),
+    VERIZON(7),
+    ELECTRIC(8),
+    WATER(9),
+    TRASH(10),
+    SEWAGE(11),
+    GASS(12),
+    CONVIENENT_STORE(13),
+    HOUSE(14),
+    OTHER(15),
+    SKIP(0);
 
     Category(int col) {
         this.col = col;

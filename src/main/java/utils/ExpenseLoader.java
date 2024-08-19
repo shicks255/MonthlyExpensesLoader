@@ -21,6 +21,7 @@ import java.nio.file.Path;
 import java.time.LocalDate;
 import java.time.Month;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 public class ExpenseLoader {
@@ -30,11 +31,16 @@ public class ExpenseLoader {
     private final Path bankCsv;
     private final Path expenseCsv;
 
+    private final List<Category> promptableCats;
+
     public ExpenseLoader(ParsingStrategy parsingStrategy, Path csvPath, Path expsensePath, UserInteractor userInteractor) {
         this.m_parsingStrategy = parsingStrategy;
         this.m_userInteractor = userInteractor;
         this.bankCsv = csvPath;
         this.expenseCsv = expsensePath;
+        this.promptableCats = List.of(
+            Category.FOOD, Category.OTHER, Category.HOUSE, Category.INCOME
+        );
     }
 
     public Map<Month, Map<Category,StringBuilder>> loadExpensesIntoFile() throws IOException {
@@ -47,14 +53,24 @@ public class ExpenseLoader {
 
             for (CSVRecord record : parser) {
                 Item item = m_parsingStrategy.parse(record);
+                if (item.getAmount().equals("")) {
+                    continue;
+                }
                 int rowNumber = item.getTransactionDate().getMonthValue();
                 XSSFRow row = sheet.getRow(rowNumber);
 
                 int userCategoryNumber = m_userInteractor.promptUserForCategory(item);
                 Category cat = Category.getCategoryFromCol(userCategoryNumber);
+
+                if (cat.equals(Category.SKIP)) {
+                    continue;
+                }
+
                 item.setCategory(cat);
-                item.setMemo(m_userInteractor.promptUserForMemo());
-                addToMemo(commentsToAdd, item);
+                if (promptableCats.contains(cat)) {
+                    item.setMemo(m_userInteractor.promptUserForMemo());
+                    addToMemo(commentsToAdd, item);
+                }
 
                 String formula = getFormula(row, userCategoryNumber, item);
                 row.getCell(userCategoryNumber).setCellFormula(formula);

@@ -41,6 +41,10 @@ public class Item {
     }
 
     public String getAmount() {
+
+        if (Double.parseDouble(amount) > 0) {
+            return "+" + amount;
+        }
         return amount;
     }
 
